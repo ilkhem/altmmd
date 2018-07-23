@@ -1,4 +1,9 @@
 import numpy as np
+import os
+if os.environ.get('DISPLAY', '') == '':
+    print('Running w/o a display')
+    import matplotlib
+    matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import scipy as sp
 from scipy.stats import multivariate_normal as mv
