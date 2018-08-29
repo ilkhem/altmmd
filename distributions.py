@@ -65,6 +65,22 @@ class GaussianKernel(Distribution):
         return np.random.normal(0, self.s, shape)
 
 
+class GaussianKernel1D(Distribution):
+    """1D Gaussian Kernel in a vectorized manner"""
+
+    def __init__(self, s=1):
+        self.s = s
+
+    def f(self, x: np.ndarray):
+        return (1 / np.sqrt(2 * np.pi * self.s ** 2)) * np.exp(-(x ** 2) / (2 * self.s ** 2))
+
+    def b(self, x: np.ndarray):
+        return (-1 / self.s ** 2) * np.multiply(self.f(x), x)
+
+    def sample(self, shape):
+        return np.random.normal(0, self.s, shape)
+
+
 class SumOfGaussians(Distribution):
     def __init__(self, mus, ss):
         assert len(ss) == len(mus)
@@ -78,6 +94,27 @@ class SumOfGaussians(Distribution):
     def b(self, x: np.ndarray):
         return (1 / self.a) * np.sum(
             [-(1 / self.ss[i]) * (mv.pdf(x, mean=self.mus[i], cov=self.ss[i]) * (x - self.mus[i]).T).T for i in
+             range(self.a)], axis=0)
+
+
+class SumOfGaussians1D(Distribution):
+    """1D sum of Gaussians in a vectorized manner"""
+
+    def __init__(self, mus, ss):
+        assert len(ss) == len(mus)
+        self.a = len(mus)
+        self.mus = mus
+        self.ss = ss
+
+    def _f(self, mu, s, x):
+        return (1 / np.sqrt(2 * np.pi * s ** 2)) * np.exp(-(x - mu) ** 2 / (-2 * s ** 2))
+
+    def f(self, x: np.ndarray):
+        return (1 / self.a) * np.sum([self._f(self.mus[i], self.ss[i], x) for i in range(self.a)], axis=0)
+
+    def b(self, x: np.ndarray):
+        return (1 / self.a) * np.sum(
+            [-(1 / self.ss[i] ** 2) * np.multiply(self._f(self.mus[i], self.ss[i], x), (x - self.mus[i])) for i in
              range(self.a)], axis=0)
 
 

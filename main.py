@@ -12,12 +12,12 @@ if __name__ == '__main__':  # TESTS FOR F1
 
     # define a gaussian kernel with scale 1
     s = 1
-    k = GaussianKernel(s)
+    k = GaussianKernel1D(s)
 
     # define the target distribution: sum of gaussians in dim 1
     mus = [-5, 0, 4]
     ss = [1, 0.3, 2]  # with these settings, p has non negligeable values and grads in the interval [-5, 5]
-    p = SumOfGaussians(mus, ss)
+    p = SumOfGaussians1D(mus, ss)
 
     # start by random n points between -10 and 10
     n = 50
@@ -40,11 +40,11 @@ if __name__ == '__main__':  # TESTS FOR F1
     dx = np.zeros_like(x)
     for j in tqdm(range(nsteps)):
         z = k.sample((n, m))
-        for i in range(n):
-            dx[i] = -2 / (n * m) * np.sum(p.b(x[i] + z[i])) + \
-                    1 / (n * (n - 1)) * (np.sum(k.b(x[i] - x) - k.b(x - x[i])))
-        # dx = -2 / (n * m) * np.sum(np.apply_along_axis(p.b, 1, x.reshape((n, 1)) + z), axis=1) + 1 / (n * (n - 1)) * (
-        #     np.sum(k.b(x.reshape((n, 1)) - x.reshape((1, n))) - k.b(x.reshape((1, n)) - x.reshape((n, 1))), axis=1))
+        # for i in range(n):
+        #     dx[i] = -2 / (n * m) * np.sum(p.b(x[i] + z[i])) + \
+        #             1 / (n * (n - 1)) * (np.sum(k.b(x[i] - x) - k.b(x - x[i])))
+        dx = -2 / (n * m) * np.sum(p.b(x.reshape((n, 1)) + z), axis=1) + 1 / (n * (n - 1)) * (
+            np.sum(k.b(x.reshape((n, 1)) - x.reshape((1, n))) - k.b(x.reshape((1, n)) - x.reshape((n, 1))), axis=1))
         x -= lr * dx
 
     ax.scatter(x, [0] * n, color='green')
