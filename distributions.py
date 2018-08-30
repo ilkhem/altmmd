@@ -107,7 +107,7 @@ class SumOfGaussians1D(Distribution):
         self.ss = ss
 
     def _f(self, mu, s, x):
-        return (1 / np.sqrt(2 * np.pi * s ** 2)) * np.exp(-(x - mu) ** 2 / (-2 * s ** 2))
+        return (1 / np.sqrt(2 * np.pi * s ** 2)) * np.exp(-(x - mu) ** 2 / (2 * s ** 2))
 
     def f(self, x: np.ndarray):
         return (1 / self.a) * np.sum([self._f(self.mus[i], self.ss[i], x) for i in range(self.a)], axis=0)
