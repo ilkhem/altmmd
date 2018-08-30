@@ -134,3 +134,10 @@ class LogSumOfGaussians(Distribution):
         return (1 / self.a) * np.sum(
             [-(1 / self.ss[i]) * (mv.pdf(x, mean=self.mus[i], cov=self.ss[i]) * (x - self.mus[i]).T).T for i in
              range(self.a)], axis=0) / tmp[:, np.newaxis]
+
+
+def energy1D(x: np.ndarray, p: SumOfGaussians1D, k: GaussianKernel1D, z: np.ndarray):
+    n = x.shape[0]
+    m = z.shape[1]
+    return -2 / (n * m) * np.sum(p(x.reshape((n, 1)) + z)) + 1 / (n * (n - 1)) * np.sum(
+        k(x.reshape((n, 1)) - x.reshape((1, n))) - n * k(0))
