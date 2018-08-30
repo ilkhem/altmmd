@@ -5,7 +5,7 @@ from tqdm import tqdm
 from distributions import GaussianKernel1D, SumOfGaussians1D, energy1D
 
 
-def experiment1(n=1000, m=100, mus=None, ss=None, s=1):
+def experiment1(n=1000, m=100, mus=None, ss=None, s=1.0):
     """
     First experiment for F1 in 1D with sum of gaussians as target, and gaussian kernel.
     An adaptive learning rate greatly improves the performance of the model.
@@ -25,11 +25,12 @@ def experiment1(n=1000, m=100, mus=None, ss=None, s=1):
     p = SumOfGaussians1D(mus, ss)
 
     # start by random n points between -8 and 8
+    np.random.seed(30082018)  # fix the seed for consistent data over runs
     xi = np.random.uniform(-8, 8, n)
 
     # define a learning rate, and do the gradient descent
     lr = 10
-    nsteps = 1000
+    nsteps = 1500
     z = k.sample((n, m))
     e = [energy1D(xi, p, k, z)]
     e2 = [energy1D(xi, p, k, z)]
@@ -48,15 +49,15 @@ def experiment1(n=1000, m=100, mus=None, ss=None, s=1):
         e2.append(energy1D(x2, p, k, z))
 
     # plotting
-    t = np.linspace(-10, 10, 100)
-    fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(10, 12))
+    t = np.linspace(-10, 10, 250)
+    fig, axes = plt.subplots(nrows=3, ncols=1)
     for ax in axes:
         ax.plot(t, p(t))
-    axes[0].hist(xi, 75, density=True)
+    axes[0].hist(xi, 100, density=True)
     axes[0].set_title('initial')
-    axes[1].hist(x, 75, density=True)
+    axes[1].hist(x, 100, density=True)
     axes[1].set_title('fixed lr')
-    axes[2].hist(x2, 75, density=True)
+    axes[2].hist(x2, 100, density=True)
     axes[2].set_title('adaptive lr')
 
     fig2, ax = plt.subplots()
@@ -67,4 +68,4 @@ def experiment1(n=1000, m=100, mus=None, ss=None, s=1):
 
 
 if __name__ == '__main__':
-    experiment1(s=np.sqrt(0.1))  # 1ST TEST FOR F1
+    experiment1(s=0.1)  # 1ST TEST FOR F1
