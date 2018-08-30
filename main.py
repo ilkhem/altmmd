@@ -1,54 +1,70 @@
 import matplotlib.pyplot as plt
+import numpy as np
 from tqdm import tqdm
 
-from distributions import *
+from distributions import GaussianKernel1D, SumOfGaussians1D, energy1D
 
 
-def compute_grads():
-    pass
+def experiment1(n=1000, m=100, mus=None, ss=None, s=1):
+    """
+    First experiment for F1 in 1D with sum of gaussians as target, and gaussian kernel.
+    An adaptive learning rate greatly improves the performance of the model.
+    The experiment takes the parameter of the target dist and the kernel as input, and plots the histogram with and
+    without an adaptive lr, comparing it to the initial random histogram, and the true distribution.
+    """
+    if mus is None:
+        mus = [-5, 1, 4]
+    if ss is None:
+        ss = [1, 0.3, 2]
+    eps = 0.01
 
-
-if __name__ == '__main__':  # TESTS FOR F1
-
-    # define a gaussian kernel with scale 1
-    s = 1
+    # define a gaussian kernel with scale s
     k = GaussianKernel1D(s)
 
     # define the target distribution: sum of gaussians in dim 1
-    mus = [-5, 0, 4]
-    ss = [1, 0.3, 2]  # with these settings, p has non negligeable values and grads in the interval [-5, 5]
     p = SumOfGaussians1D(mus, ss)
 
-    # start by random n points between -10 and 10
-    n = 50
-    xi = np.random.uniform(-6, 5, n)
-
-    # generate for each position m samples from the kernel k
-    m = 100
-
-    # plot p
-    t = np.linspace(-10, 10, 100)
-    fig, ax = plt.subplots(figsize=(10, 6))
-    fig2, ax2 = plt.subplots(figsize=(10, 6))
-    ax.plot(t, p(t))
-    ax2.plot(t, p(t))
+    # start by random n points between -8 and 8
+    xi = np.random.uniform(-8, 8, n)
 
     # define a learning rate, and do the gradient descent
-    lr = 1
+    lr = 10
     nsteps = 1000
+    z = k.sample((n, m))
+    e = [energy1D(xi, p, k, z)]
+    e2 = [energy1D(xi, p, k, z)]
+
     x = xi.copy()
-    dx = np.zeros_like(x)
-    for j in tqdm(range(nsteps)):
-        z = k.sample((n, m))
-        # for i in range(n):
-        #     dx[i] = -2 / (n * m) * np.sum(p.b(x[i] + z[i])) + \
-        #             1 / (n * (n - 1)) * (np.sum(k.b(x[i] - x) - k.b(x - x[i])))
+    x2 = xi.copy()
+    for _ in tqdm(range(nsteps)):
+        z = k.sample((n, m))  # generate for each position m samples from the kernel k
         dx = -2 / (n * m) * np.sum(p.b(x.reshape((n, 1)) + z), axis=1) + 1 / (n * (n - 1)) * (
             np.sum(k.b(x.reshape((n, 1)) - x.reshape((1, n))) - k.b(x.reshape((1, n)) - x.reshape((n, 1))), axis=1))
+        dx2 = -2 / (n * m) * np.sum(p.b(x2.reshape((n, 1)) + z), axis=1) + 1 / (n * (n - 1)) * (
+            np.sum(k.b(x2.reshape((n, 1)) - x2.reshape((1, n))) - k.b(x2.reshape((1, n)) - x2.reshape((n, 1))), axis=1))
         x -= lr * dx
+        x2 -= np.diag(1 / (p(x2) + eps)).dot(dx2)
+        e.append(energy1D(x, p, k, z))
+        e2.append(energy1D(x2, p, k, z))
 
-    ax.scatter(x, [0] * n, color='green')
-    ax2.scatter(xi, [0] * n, color='red')
-    # ax.hist(xi, 75, density=True, color='green')
-    # ax.hist(x, 75, density=True, color='red')
+    # plotting
+    t = np.linspace(-10, 10, 100)
+    fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(10, 12))
+    for ax in axes:
+        ax.plot(t, p(t))
+    axes[0].hist(xi, 75, density=True)
+    axes[0].set_title('initial')
+    axes[1].hist(x, 75, density=True)
+    axes[1].set_title('fixed lr')
+    axes[2].hist(x2, 75, density=True)
+    axes[2].set_title('adaptive lr')
+
+    fig2, ax = plt.subplots()
+    ax.plot(e, color='red')
+    ax.plot(e2, color='green')
+
     plt.show()
+
+
+if __name__ == '__main__':
+    experiment1(s=np.sqrt(0.1))  # 1ST TEST FOR F1
