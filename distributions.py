@@ -47,24 +47,6 @@ class NonStaticKernel:
         return np.random.normal(0, self.s, shape)
 
 
-class GaussianKernel(Distribution):
-    def __init__(self, s=1):
-        self.s = s
-
-    def f(self, x: np.ndarray):
-        if np.ndim(x) > 1:
-            mu = np.zeros(x.shape[-1])
-        else:
-            mu = 0
-        return mv.pdf(x, mean=mu, cov=self.s)
-
-    def b(self, x: np.ndarray):
-        return (-1 / self.s) * (self.f(x) * x.T).T
-
-    def sample(self, shape):
-        return np.random.normal(0, self.s, shape)
-
-
 class GaussianKernel1D(Distribution):
     """1D Gaussian Kernel in a vectorized manner"""
 
@@ -81,20 +63,24 @@ class GaussianKernel1D(Distribution):
         return np.random.normal(0, self.s, shape)
 
 
-class SumOfGaussians(Distribution):
-    def __init__(self, mus, ss):
-        assert len(ss) == len(mus)
-        self.a = len(mus)
-        self.mus = mus
-        self.ss = ss
+class GaussianKernel(Distribution):
+    """Gaussian Kernel in more than 1D in a vectorized manner. For simplicity, only circular covariance is considered
+    it should also work for 1D, but x should be reshaped into (n,1) (ndims should be at least 2) """
+
+    # TODO: test the implementation for 1D and higher
+
+    def __init__(self, s):
+        self.s = s  # s is still the standard deviation, the covariance is s^2*Id
 
     def f(self, x: np.ndarray):
-        return (1 / self.a) * np.sum([mv.pdf(x, mean=self.mus[i], cov=self.ss[i]) for i in range(self.a)], axis=0)
+        d = x.shape[-1]  # n data points of dimension d each (can also be a matrix n*n of d-dimensional vectors)
+        return (1 / np.sqrt((2 * np.pi * self.s ** 2) ** d)) * np.exp(-np.sum(x ** 2, axis=-1) / (2 * self.s ** 2))
 
     def b(self, x: np.ndarray):
-        return (1 / self.a) * np.sum(
-            [-(1 / self.ss[i]) * (mv.pdf(x, mean=self.mus[i], cov=self.ss[i]) * (x - self.mus[i]).T).T for i in
-             range(self.a)], axis=0)
+        return (-1 / self.s ** 2) * np.multiply(np.expand_dims(self.f(x), -1), x)
+
+    def sample(self, shape):
+        return np.random.normal(0, self.s, shape)
 
 
 class SumOfGaussians1D(Distribution):
@@ -118,6 +104,33 @@ class SumOfGaussians1D(Distribution):
              range(self.a)], axis=0)
 
 
+class SumOfGaussians(Distribution):
+    """High dimension sum of Gaussians in a vectorized manner. It should also work for 1D, but x should be reshaped
+    into (n,1) (ndims should be at least 2) """
+
+    # TODO: test the implementation for 1D and higher D
+
+    def __init__(self, mus, ss):
+        # assert ss.shape[0] == mus.shape[0]
+        self.a = ss.shape[0]
+        self.mus = mus
+        self.ss = ss
+
+    def _f(self, mu, s, x):
+        d = x.shape[-1]
+        return (1 / np.sqrt((2 * np.pi * s ** 2) ** d)) * np.exp(
+            -np.sum((x - np.reshape(mu, (1,) * (x.ndim - 1) + (d,))) ** 2, axis=-1) / (2 * s ** 2))
+
+    def f(self, x: np.ndarray):
+        return (1 / self.a) * np.sum([self._f(self.mus[i], self.ss[i], x) for i in range(self.a)], axis=0)
+
+    def b(self, x: np.ndarray):
+        d = x.shape[-1]
+        return (1 / self.a) * np.sum([-(1 / self.ss[i] ** 2) * np.multiply(
+            np.expand_dims(self._f(self.mus[i], self.ss[i], x), - 1),
+            (x - np.reshape(self.mus[i], (1,) * (x.ndim - 1) + (d,)))) for i in range(self.a)], axis=0)
+
+
 class LogSumOfGaussians(Distribution):
     def __init__(self, mus, ss):
         assert len(ss) == len(mus)
@@ -139,5 +152,13 @@ class LogSumOfGaussians(Distribution):
 def energy1D(x: np.ndarray, p: SumOfGaussians1D, k: GaussianKernel1D, z: np.ndarray):
     n = x.shape[0]
     m = z.shape[1]
-    return -2 / (n * m) * np.sum(p(x.reshape((n, 1)) + z)) + 1 / (n * (n - 1)) * np.sum(
-        k(x.reshape((n, 1)) - x.reshape((1, n))) - n * k(0))
+    return -2 / (n * m) * np.sum(p.f(x.reshape((n, 1)) + z)) + 1 / (n * (n - 1)) * (np.sum(
+        k.f(x.reshape((n, 1)) - x.reshape((1, n)))) - n * k(0))
+
+
+def energy(x: np.ndarray, p: SumOfGaussians, k: GaussianKernel, z: np.ndarray):
+    # TODO: test the implementation for 1D and higher D
+    n = x.shape[0]
+    m = z.shape[1]
+    return -2 / (n * m) * np.sum(p.f(np.expand_dims(x, 1) + z)) + 1 / (n * (n - 1)) * (np.sum(
+        k.f(np.expand_dims(x, 1) - np.expand_dims(x, 0))) - n * k(0))

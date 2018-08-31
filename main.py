@@ -67,5 +67,15 @@ def experiment1(n=1000, m=100, mus=None, ss=None, s=1.0):
     plt.show()
 
 
+def experiment2():
+    """
+    Second experiment for F1 in 2D. This one uses the same type of kernel and target distribution as experiment1. The
+    implementation should support any dimension d for the data, but it is done in 2D for visualisation.
+    Since experiment1 showed that an adaptive learning rate achieves the desirable results (a fixed lr doesn't converge
+    to the right distribution), this experiment should implement it.
+    """
+    pass
+
+
 if __name__ == '__main__':
     experiment1(s=0.1)  # 1ST TEST FOR F1
