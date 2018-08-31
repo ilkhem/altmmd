@@ -112,7 +112,7 @@ class SumOfGaussians(Distribution):
 
     def __init__(self, mus, ss):
         # assert ss.shape[0] == mus.shape[0]
-        self.a = ss.shape[0]
+        self.a = mus.shape[0]
         self.mus = mus
         self.ss = ss
 
@@ -161,4 +161,4 @@ def energy(x: np.ndarray, p: SumOfGaussians, k: GaussianKernel, z: np.ndarray):
     n = x.shape[0]
     m = z.shape[1]
     return -2 / (n * m) * np.sum(p.f(np.expand_dims(x, 1) + z)) + 1 / (n * (n - 1)) * (np.sum(
-        k.f(np.expand_dims(x, 1) - np.expand_dims(x, 0))) - n * k(0))
+        k.f(np.expand_dims(x, 1) - np.expand_dims(x, 0))) - n * k(np.array([0])))
