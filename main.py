@@ -20,6 +20,7 @@ def experiment1(n=1000, m=100, mus=None, ss=None, s=1.0):
 
     # define a gaussian kernel with scale s
     k = GaussianKernel1D(s)
+    k2 = GaussianKernel1D(3)
 
     # define the target distribution: sum of gaussians in dim 1
     p = SumOfGaussians1D(mus, ss)
@@ -33,7 +34,7 @@ def experiment1(n=1000, m=100, mus=None, ss=None, s=1.0):
     nsteps = 2000
     z = k.sample((n, m))
     e = [energy1D(xi, p, k, z)]
-    e2 = [energy1D(xi, p, k, z)]
+    e2 = [energy1D(xi, p, k2, z)]
 
     x = xi.copy()
     x2 = xi.copy()
@@ -43,12 +44,12 @@ def experiment1(n=1000, m=100, mus=None, ss=None, s=1.0):
             np.sum(k.b(np.expand_dims(x, 1) - np.expand_dims(x, 0)) - k.b(np.expand_dims(x, 0) - np.expand_dims(x, 1)),
                    axis=1))
         dx2 = -2 / (n * m) * np.sum(p.b(np.expand_dims(x2, 1) + z), axis=1) + 1 / (n * (n - 1)) * (np.sum(
-            k.b(np.expand_dims(x2, 1) - np.expand_dims(x2, 0)) - k.b(np.expand_dims(x2, 0) - np.expand_dims(x2, 1)),
+            k2.b(np.expand_dims(x2, 1) - np.expand_dims(x2, 0)) - k2.b(np.expand_dims(x2, 0) - np.expand_dims(x2, 1)),
             axis=1))
-        x -= lr * dx
+        x -= dx / (p(x) + eps)
         x2 -= dx2 / (p(x2) + eps)
         e.append(energy1D(x, p, k, z))
-        e2.append(energy1D(x2, p, k, z))
+        e2.append(energy1D(x2, p, k2, z))
 
     # plotting
     t = np.linspace(-10, 10, 250)
@@ -58,14 +59,14 @@ def experiment1(n=1000, m=100, mus=None, ss=None, s=1.0):
     axes[0].hist(xi, 100, density=True)
     axes[0].set_title('initial')
     axes[1].hist(x, 100, density=True)
-    axes[1].set_title('fixed lr')
+    axes[1].set_title('s = 0.1')
     axes[2].hist(x2, 100, density=True)
-    axes[2].set_title('adaptive lr')
+    axes[2].set_title('s = 3')
 
     fig2, ax = plt.subplots()
-    ax.plot(e, color='red')
-    ax.plot(e2, color='green')
-
+    ax.plot(e, color='red', label='s=0.1')
+    ax.plot(e2, color='green', label='s=3')
+    ax.legend()
     plt.show()
 
 
@@ -121,6 +122,7 @@ def experiment2():
     ax.plot(e2, color='green')
     plt.show()
 
+
 if __name__ == '__main__':
-    # experiment1(s=0.1)  # 1ST TEST FOR F1
-    experiment2()
+    experiment1(s=0.1)  # 1ST TEST FOR F1
+    # experiment2()
