@@ -67,8 +67,6 @@ class GaussianKernel(Distribution):
     """Gaussian Kernel in more than 1D in a vectorized manner. For simplicity, only circular covariance is considered
     it should also work for 1D, but x should be reshaped into (n,1) (ndims should be at least 2) """
 
-    # TODO: test the implementation for 1D and higher
-
     def __init__(self, s):
         self.s = s  # s is still the standard deviation, the covariance is s^2*Id
 
@@ -105,10 +103,8 @@ class SumOfGaussians1D(Distribution):
 
 
 class SumOfGaussians(Distribution):
-    """High dimension sum of Gaussians in a vectorized manner. It should also work for 1D, but x should be reshaped
-    into (n,1) (ndims should be at least 2) """
-
-    # TODO: test the implementation for 1D and higher D
+    """High dimension sum of Gaussians in a vectorized manner. Tests show that it works for 1D but everything
+    needs to have a dimension axis (with value equal to 1) """
 
     def __init__(self, mus, ss):
         # assert ss.shape[0] == mus.shape[0]
@@ -129,6 +125,19 @@ class SumOfGaussians(Distribution):
         return (1 / self.a) * np.sum([-(1 / self.ss[i] ** 2) * np.multiply(
             np.expand_dims(self._f(self.mus[i], self.ss[i], x), - 1),
             (x - np.reshape(self.mus[i], (1,) * (x.ndim - 1) + (d,)))) for i in range(self.a)], axis=0)
+
+    def _f_projected_single(self, mu, s, x):
+        """When projected, data has dim 1 and we can use the simple expression of 1D"""
+        return (1 / np.sqrt(2 * np.pi * s ** 2)) * np.exp(-(x - mu) ** 2 / (2 * s ** 2))
+
+    def _f_projected(self, x, mus, ss):
+        """"compute the complete projected forward. Means need to be projected too"""
+        return (1 / self.a) * np.sum([self._f_projected_single(mus[i], ss[i], x) for i in range(self.a)], axis=0)
+
+    def project(self, x: np.ndarray, axis):
+        xp = np.take(x, axis, -1)  # projected data on 1 axis, "effective" dim is 1
+        musp = np.take(self.mus, axis, -1)
+        return self._f_projected(xp, musp, self.ss)
 
 
 class LogSumOfGaussians(Distribution):
@@ -157,7 +166,6 @@ def energy1D(x: np.ndarray, p: SumOfGaussians1D, k: GaussianKernel1D, z: np.ndar
 
 
 def energy(x: np.ndarray, p: SumOfGaussians, k: GaussianKernel, z: np.ndarray):
-    # TODO: test the implementation for 1D and higher D
     n = x.shape[0]
     m = z.shape[1]
     return -2 / (n * m) * np.sum(p.f(np.expand_dims(x, 1) + z)) + 1 / (n * (n - 1)) * (np.sum(
