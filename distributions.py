@@ -135,9 +135,9 @@ class SumOfGaussians(Distribution):
         return (1 / self.a) * np.sum([self._f_projected_single(mus[i], ss[i], x) for i in range(self.a)], axis=0)
 
     def project(self, x: np.ndarray, axis):
-        xp = np.take(x, axis, -1)  # projected data on 1 axis, "effective" dim is 1
         musp = np.take(self.mus, axis, -1)
-        return self._f_projected(xp, musp, self.ss)
+        return self._f_projected(x, musp, self.ss)
+
 
 
 class LogSumOfGaussians(Distribution):

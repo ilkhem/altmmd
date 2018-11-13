@@ -81,48 +81,56 @@ def experiment2():
     d = 2  # dimension of the data
 
     # define a kernel
-    s = 1
+    s = 0.5
     k = GaussianKernel(s)
 
     # define a terget distribution
-    mus = np.array([[-3, -3], [1, 1], [2, -2]])  # 2D points
-    ss = np.array([0.8, 1, 2])
+    mus = np.array([[-5, -5], [-1, 2], [3, -2]])  # 2D points
+    ss = np.array([0.8, 1, 0.5])
     p = SumOfGaussians(mus, ss)
 
     # start by random n points between -8 and 8
     # np.random.seed(30082018)  # fix the seed for consistent data over runs
     n = 1000
-    xi = np.random.uniform(-6, 6, (n, d))
+    np.random.seed(30082018)
+    xi = np.random.uniform(-5, 5, (n, d))
 
     # define a learning rate, and do the gradient descent
     m = 100
-    lr = 10
-    nsteps = 2000
+    nsteps = 5000
     z = k.sample((n, m, d))
     e = [energy(xi, p, k, z)]
-    e2 = [energy(xi, p, k, z)]
 
     x = xi.copy()
-    x2 = xi.copy()
     for _ in tqdm(range(nsteps)):
         z = k.sample((n, m, d))  # generate for each position m samples from the kernel k
         dx = -2 / (n * m) * np.sum(p.b(np.expand_dims(x, 1) + z), axis=1) + 1 / (n * (n - 1)) * (
             np.sum(k.b(np.expand_dims(x, 1) - np.expand_dims(x, 0)) - k.b(np.expand_dims(x, 0) - np.expand_dims(x, 1)),
                    axis=1))
-        dx2 = -2 / (n * m) * np.sum(p.b(np.expand_dims(x2, 1) + z), axis=1) + 1 / (n * (n - 1)) * (np.sum(
-            k.b(np.expand_dims(x2, 1) - np.expand_dims(x2, 0)) - k.b(np.expand_dims(x2, 0) - np.expand_dims(x2, 1)),
-            axis=1))
-        x -= lr * dx
-        x2 -= dx2 / (np.expand_dims(p(x2), 1) + eps)
+        x -= dx / (np.expand_dims(p(x), 1) + eps)
         e.append(energy(x, p, k, z))
-        e2.append(energy(x2, p, k, z))
+
+    t = np.linspace(-10, 10, 250)
+    fig, axes = plt.subplots(nrows=2, ncols=2)
+    axes[0,0].plot(t, p.project(t, 0))
+    axes[0,0].hist(xi[:, 0], 100, density=True)
+    axes[0,0].set_title('initial proj onto 1st axis')
+    axes[0,1].plot(t, p.project(t, 1))
+    axes[0,1].hist(xi[:, 1], 100, density=True)
+    axes[0,1].set_title('initial proj onto 2nd axis')
+    axes[1,0].plot(t, p.project(t, 0))
+    axes[1,0].hist(x[:, 0], 100, density=True)
+    axes[1,0].set_title('trained proj onto 1st axis')
+    axes[1,1].plot(t, p.project(t, 1))
+    axes[1,1].hist(x[:, 1], 100, density=True)
+    axes[1,1].set_title('trained proj onto 2nd axis')
+    fig.suptitle('Convergence in 2D for s={}, n={}, d={}, m={} nsteps={}'.format(s, n, d, m, nsteps))
 
     fig2, ax = plt.subplots()
-    ax.plot(e, color='red')
-    ax.plot(e2, color='green')
+    ax.plot(e)
     plt.show()
 
 
 if __name__ == '__main__':
-    experiment1(s=0.1)  # 1ST TEST FOR F1
-    # experiment2()
+    # experiment1(s=0.1)  # 1ST TEST FOR F1
+    experiment2()
