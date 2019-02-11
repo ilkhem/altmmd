@@ -47,6 +47,16 @@ class NonStaticKernel:
         return np.random.normal(0, self.s, shape)
 
 
+class Green(Distribution):
+    def f(self, x):
+        return -1 / (np.abs(x) + 0.001)
+
+    def b(self, x):
+        return -1 / (x ** 2 + 0.001)
+
+    def sample(self, shape):
+        return np.random.normal(0, 1, shape)
+
 class GaussianKernel1D(Distribution):
     """1D Gaussian Kernel in a vectorized manner"""
 
